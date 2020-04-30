@@ -60,7 +60,7 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
   private boolean includeBase64 = false;
   private Timer timer;
   private StopWatch stopWatch;
-  
+
   private boolean isPauseResumeCapable = false;
   private Method pauseMethod = null;
   private Method resumeMethod = null;
@@ -70,7 +70,7 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
     super(reactContext);
     this.context = reactContext;
     stopWatch = new StopWatch();
-    
+
     isPauseResumeCapable = Build.VERSION.SDK_INT > Build.VERSION_CODES.M;
     if (isPauseResumeCapable) {
       try {
@@ -302,23 +302,34 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
         return;
       }
     }
-    
+
     isPaused = false;
     promise.resolve(null);
   }
 
   private void startTimer(){
-    timer = new Timer();
-    timer.scheduleAtFixedRate(new TimerTask() {
-      @Override
-      public void run() {
-        if (!isPaused) {
-          WritableMap body = Arguments.createMap();
-          body.putDouble("currentTime", stopWatch.getTimeSeconds());
-          sendEvent("recordingProgress", body);
-        }
-      }
-    }, 0, 1000);
+	timer = new Timer();
+	timer.scheduleAtFixedRate(new TimerTask() {
+		@Override
+		public void run() {
+			if (!isPaused) {
+				WritableMap body = Arguments.createMap();
+				body.putDouble("currentTime", stopWatch.getTimeSeconds());
+				int maxAmplitude = 0;
+				if (recorder != null) {
+					maxAmplitude = recorder.getMaxAmplitude();
+
+				}
+				double dB = -160;
+				double maxAudioSize = 32767;
+				if (maxAmplitude > 0){
+					dB = 20 * Math.log10(maxAmplitude / maxAudioSize);
+				}
+				body.putInt("currentMetering", (int) dB);
+				sendEvent("recordingProgress", body);
+			}
+		}
+	}, 0, 250);
   }
 
   private void stopTimer(){
